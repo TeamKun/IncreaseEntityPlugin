@@ -1,0 +1,5 @@
+name: Increase Entity Plugin
+version: @version@
+main: net.kunmc.lab.increaseentity.IncreaseEntityPlugin
+api-version: 1.16
+authors: [ Yu_212 ]
