@@ -1,5 +1,17 @@
-name: Increase Entity Plugin
+name: Increase-Entity-Plugin
 version: @version@
 main: net.kunmc.lab.increaseentity.IncreaseEntityPlugin
 api-version: 1.16
 authors: [ Yu_212 ]
+permissions:
+  increaseentity.configcommand:
+    default: op
+  increaseentity.showcommand:
+    default: op
+commands:
+  ieconfig:
+    usage: /ieconfig <set|reload> <key> <value>
+    permission: increaseentity.configcommand
+  ieshow:
+    usage: /ieshow
+    permission: increaseentity.showcommand
