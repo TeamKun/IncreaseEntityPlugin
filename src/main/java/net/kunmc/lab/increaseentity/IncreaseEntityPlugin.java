@@ -2,8 +2,15 @@ package net.kunmc.lab.increaseentity;
 
 import net.kunmc.lab.increaseentity.config.ConfigCommand;
 import net.kunmc.lab.increaseentity.config.ConfigManager;
+import net.minecraft.server.v1_16_R3.EntityLiving;
+import net.minecraft.server.v1_16_R3.NBTTagCompound;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
+import org.bukkit.craftbukkit.v1_16_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_16_R3.entity.CraftLivingEntity;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -64,11 +71,24 @@ public final class IncreaseEntityPlugin extends JavaPlugin {
         if (targetEntity == null) {
             return;
         }
-        increase(targetEntity, numIncrease);
+        if (targetEntity.getType() == EntityType.PLAYER || !(targetEntity instanceof LivingEntity)) {
+            return;
+        }
+        for (int i = 0; i < numIncrease; i++) {
+            copy((LivingEntity)targetEntity);
+        }
     }
 
-    public void increase(Entity entity, int numIncrease) {
-        System.out.println("ふえるよ!" + numIncrease + ", " + entity);
+    public void copy(LivingEntity entity) {
+        World world = entity.getWorld();
+        LivingEntity spawned = (LivingEntity)world.spawnEntity(entity.getLocation(), entity.getType());
+        EntityLiving source = ((CraftLivingEntity)entity).getHandle();
+        EntityLiving dest = ((CraftLivingEntity)spawned).getHandle();
+        NBTTagCompound nbtTagCompound = new NBTTagCompound();
+        source.save(nbtTagCompound);
+        source.saveData(nbtTagCompound);
+        dest.load(nbtTagCompound);
+        dest.loadData(nbtTagCompound);
     }
 
     public static IncreaseEntityPlugin getInstance() {
