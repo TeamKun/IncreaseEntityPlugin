@@ -7,7 +7,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.RayTraceResult;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -17,6 +16,7 @@ import java.util.UUID;
 public final class IncreaseEntityPlugin extends JavaPlugin {
     private static IncreaseEntityPlugin instance;
     private ConfigManager configManager;
+    private BukkitRunnable runnable;
 
     @Override
     public void onEnable() {
@@ -29,20 +29,23 @@ public final class IncreaseEntityPlugin extends JavaPlugin {
         ShowCommand showCommand = new ShowCommand();
         Objects.requireNonNull(getCommand("ieshow")).setExecutor(showCommand);
         Objects.requireNonNull(getCommand("ieshow")).setTabCompleter(showCommand);
-        updateScheduler();
+        updateRunnable();
     }
 
     public void onConfigChanged(String path, Object value) {
-        updateScheduler();
+        updateRunnable();
     }
 
-    public void updateScheduler() {
+    public void updateRunnable() {
         ConfigManager configManager = getConfigManager();
         int interval = configManager.getInterval();
         int increasePerTime = configManager.getIncreasePerTime();
         int distance = configManager.getDistance();
         Set<UUID> activatedPlayers = new HashSet<>(configManager.getActivatedPlayers());
-        new BukkitRunnable() {
+        if (runnable != null) {
+            runnable.cancel();
+        }
+        runnable = new BukkitRunnable() {
             @Override
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
@@ -52,16 +55,16 @@ public final class IncreaseEntityPlugin extends JavaPlugin {
                     execute(player, distance, increasePerTime);
                 }
             }
-        }.runTaskTimer(this, 0, interval);
+        };
+        runnable.runTaskTimer(this, 0, interval);
     }
 
     public void execute(Player player, int distance, int numIncrease) {
-        RayTraceResult result = player.getWorld().rayTraceEntities(player.getEyeLocation(), player.getVelocity(), distance);
-        if (result == null || result.getHitEntity() == null) {
+        Entity targetEntity = player.getTargetEntity(distance);
+        if (targetEntity == null) {
             return;
         }
-        Entity hitEntity = result.getHitEntity();
-        increase(hitEntity, numIncrease);
+        increase(targetEntity, numIncrease);
     }
 
     public void increase(Entity entity, int numIncrease) {

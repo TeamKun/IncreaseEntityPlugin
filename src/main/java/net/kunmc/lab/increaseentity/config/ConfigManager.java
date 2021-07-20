@@ -3,22 +3,18 @@ package net.kunmc.lab.increaseentity.config;
 import net.kunmc.lab.increaseentity.IncreaseEntityPlugin;
 import net.kunmc.lab.increaseentity.config.parser.IntParser;
 import net.kunmc.lab.increaseentity.config.parser.Parser;
-import net.kunmc.lab.increaseentity.config.parser.PlayerListParser;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
 
 import java.util.*;
-import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class ConfigManager {
-    private FileConfiguration config;
     private static final Map<String, Parser<?>> CONFIGS = new HashMap<>() {{
-        put("activatedPlayers", new PlayerListParser());
         put("distance", new IntParser(1, Integer.MAX_VALUE));
         put("interval", new IntParser(1, Integer.MAX_VALUE));
         put("increasePerTime", new IntParser(1, Integer.MAX_VALUE));
     }};
+    private FileConfiguration config;
 
     public static String[] getConfigPaths() {
         return CONFIGS.keySet().toArray(new String[0]);
@@ -38,10 +34,11 @@ public class ConfigManager {
             return false;
         }
         Parser<?> parser = CONFIGS.get(path);
-        if (!parser.canUseFromCommand()) {
-            return false;
-        }
         Object value = parser.parse(valueString);
+        return setConfig(path, value);
+    }
+
+    private boolean setConfig(String path, Object value) {
         if (value == null) {
             return false;
         }
@@ -54,10 +51,24 @@ public class ConfigManager {
 
     public List<UUID> getActivatedPlayers() {
         List<UUID> activatedPlayers = new ArrayList<>();
-        for (String uuidString : config.getStringList("activatedPlayers")) {
-            activatedPlayers.add(UUID.fromString(uuidString));
+        for (String uuid : config.getStringList("activatedPlayers")) {
+            activatedPlayers.add(UUID.fromString(uuid));
         }
         return activatedPlayers;
+    }
+
+    public void addActivatedPlayers(List<UUID> add) {
+        List<UUID> list = getActivatedPlayers();
+        list.addAll(add);
+        List<String> stringList = list.stream().map(UUID::toString).collect(Collectors.toList());
+        setConfig("activatedPlayers", stringList);
+    }
+
+    public void removeActivatedPlayers(List<UUID> remove) {
+        List<UUID> list = getActivatedPlayers();
+        list.removeAll(remove);
+        List<String> stringList = list.stream().map(UUID::toString).collect(Collectors.toList());
+        setConfig("activatedPlayers", stringList);
     }
 
     public int getDistance() {

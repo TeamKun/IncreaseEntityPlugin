@@ -10,7 +10,7 @@ permissions:
     default: op
 commands:
   ieconfig:
-    usage: /ieconfig <set|reload> <key> <value>
+    usage: /ieconfig <set|reload|on|off>
     permission: increaseentity.configcommand
   ieshow:
     usage: /ieshow
