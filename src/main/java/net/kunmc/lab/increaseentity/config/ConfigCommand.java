@@ -18,7 +18,7 @@ public class ConfigCommand implements CommandExecutor, TabCompleter {
         ConfigManager configManager = IncreaseEntityPlugin.getInstance().getConfigManager();
         if (args.length == 1 && args[0].equals("reload")) {
             configManager.load();
-            sender.sendMessage(ChatColor.RESET + "コンフィグをリロードしました");
+            sender.sendMessage("コンフィグをリロードしました");
             return true;
         }
         if (args.length == 3 && args[0].equals("set")) {
@@ -26,7 +26,7 @@ public class ConfigCommand implements CommandExecutor, TabCompleter {
             String value = args[2];
             boolean result = configManager.setConfig(path, value);
             if (result) {
-                sender.sendMessage(ChatColor.RESET + path + "を" + value + "にセットしました");
+                sender.sendMessage(path + "を" + value + "にセットしました");
             } else {
                 sender.sendMessage(ChatColor.RED + "コンフィグの設定に失敗しました");
             }

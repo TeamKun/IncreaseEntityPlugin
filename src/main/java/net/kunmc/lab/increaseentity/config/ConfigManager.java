@@ -37,7 +37,11 @@ public class ConfigManager {
         if (!CONFIGS.containsKey(path)) {
             return false;
         }
-        Object value = CONFIGS.get(path).parse(valueString);
+        Parser<?> parser = CONFIGS.get(path);
+        if (!parser.canUseFromCommand()) {
+            return false;
+        }
+        Object value = parser.parse(valueString);
         if (value == null) {
             return false;
         }
@@ -48,14 +52,10 @@ public class ConfigManager {
         return true;
     }
 
-    public List<Player> getActivatedPlayers() {
-        Set<String> uuids = new HashSet<>(config.getStringList("activatedPlayers"));
-        List<Player> activatedPlayers = new ArrayList<>();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            String uuid = player.getUniqueId().toString();
-            if (uuids.contains(uuid)) {
-                activatedPlayers.add(player);
-            }
+    public List<UUID> getActivatedPlayers() {
+        List<UUID> activatedPlayers = new ArrayList<>();
+        for (String uuidString : config.getStringList("activatedPlayers")) {
+            activatedPlayers.add(UUID.fromString(uuidString));
         }
         return activatedPlayers;
     }
@@ -64,7 +64,7 @@ public class ConfigManager {
         return config.getInt("distance");
     }
 
-    public double getInterval() {
+    public int getInterval() {
         return config.getInt("interval");
     }
 
