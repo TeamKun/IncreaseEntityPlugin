@@ -1,11 +1,14 @@
 package net.kunmc.lab.increaseentity;
 
+import com.mojang.brigadier.CommandDispatcher;
 import net.kunmc.lab.increaseentity.config.ConfigCommand;
 import net.kunmc.lab.increaseentity.config.ConfigManager;
+import net.minecraft.server.v1_16_R3.CommandListenerWrapper;
 import net.minecraft.server.v1_16_R3.EntityLiving;
 import net.minecraft.server.v1_16_R3.NBTTagCompound;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.craftbukkit.v1_16_R3.CraftServer;
 import org.bukkit.craftbukkit.v1_16_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_16_R3.entity.CraftLivingEntity;
 import org.bukkit.entity.Entity;
@@ -14,11 +17,13 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class IncreaseEntityPlugin extends JavaPlugin {
     private static IncreaseEntityPlugin instance;
@@ -30,12 +35,9 @@ public final class IncreaseEntityPlugin extends JavaPlugin {
         instance = this;
         configManager = new ConfigManager();
         configManager.load();
-        ConfigCommand configCommand = new ConfigCommand();
-        Objects.requireNonNull(getCommand("ieconfig")).setExecutor(configCommand);
-        Objects.requireNonNull(getCommand("ieconfig")).setTabCompleter(configCommand);
-        ShowCommand showCommand = new ShowCommand();
-        Objects.requireNonNull(getCommand("ieshow")).setExecutor(showCommand);
-        Objects.requireNonNull(getCommand("ieshow")).setTabCompleter(showCommand);
+        CommandDispatcher<CommandListenerWrapper> dispatcher = ((CraftServer)Bukkit.getServer()).getServer().vanillaCommandDispatcher.a();
+        ConfigCommand.register(dispatcher);
+        ShowCommand.register(dispatcher);
         updateRunnable();
     }
 
@@ -89,6 +91,8 @@ public final class IncreaseEntityPlugin extends JavaPlugin {
         source.saveData(nbtTagCompound);
         dest.load(nbtTagCompound);
         dest.loadData(nbtTagCompound);
+        ThreadLocalRandom rand = ThreadLocalRandom.current();
+        spawned.setVelocity(spawned.getVelocity().add(new Vector(rand.nextDouble() / 10, 0, rand.nextDouble() / 10)));
     }
 
     public static IncreaseEntityPlugin getInstance() {

@@ -1,76 +1,82 @@
 package net.kunmc.lab.increaseentity.config;
 
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.kunmc.lab.increaseentity.IncreaseEntityPlugin;
-import org.bukkit.Bukkit;
+import net.minecraft.server.v1_16_R3.ArgumentEntity;
+import net.minecraft.server.v1_16_R3.ChatComponentText;
+import net.minecraft.server.v1_16_R3.CommandListenerWrapper;
+import net.minecraft.server.v1_16_R3.EntityPlayer;
 import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class ConfigCommand implements CommandExecutor, TabCompleter {
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+public class ConfigCommand {
+    public static void register(CommandDispatcher<CommandListenerWrapper> dispatcher) {
+        LiteralArgumentBuilder<CommandListenerWrapper> builder = LiteralArgumentBuilder.<CommandListenerWrapper>literal("ieconfig")
+                .requires(clw -> clw.getBukkitSender().hasPermission("increaseentity.configcommand"));
+        builder.then(net.minecraft.server.v1_16_R3.CommandDispatcher.a("on")
+                .then(net.minecraft.server.v1_16_R3.CommandDispatcher.a("targets", ArgumentEntity.d())
+                .executes(ConfigCommand::on)));
+        builder.then(net.minecraft.server.v1_16_R3.CommandDispatcher.a("off")
+                .then(net.minecraft.server.v1_16_R3.CommandDispatcher.a("targets", ArgumentEntity.d())
+                .executes(ConfigCommand::off)));
+        builder.then(net.minecraft.server.v1_16_R3.CommandDispatcher.a("reload")
+                .executes(ConfigCommand::reload));
+        LiteralArgumentBuilder<CommandListenerWrapper> setBuilder = net.minecraft.server.v1_16_R3.CommandDispatcher.a("set");
+        for (String path : ConfigManager.getConfigPaths()) {
+            setBuilder.then(net.minecraft.server.v1_16_R3.CommandDispatcher.a(path)
+                    .then(net.minecraft.server.v1_16_R3.CommandDispatcher.a("value", StringArgumentType.word())
+                    .executes(context -> set(context, path))));
+        }
+        builder.then(setBuilder);
+        dispatcher.register(builder);
+    }
+
+    private static int on(CommandContext<CommandListenerWrapper> context) throws CommandSyntaxException {
         ConfigManager configManager = IncreaseEntityPlugin.getInstance().getConfigManager();
-        if (args.length == 2 && (args[0].equals("on") || args[0].equals("off"))) {
-            List<UUID> entities = Bukkit.selectEntities(sender, args[1]).stream()
-                    .filter(entity -> entity instanceof Player)
-                    .map(Entity::getUniqueId)
-                    .collect(Collectors.toList());
-            if (args[0].equals("on")) {
-                configManager.addActivatedPlayers(entities);
-            } else {
-                configManager.removeActivatedPlayers(entities);
-            }
-            sender.sendMessage(String.format("%d人のプレイヤーを%sに設定しました", entities.size(), args[0]));
-            return true;
-        }
-        if (args.length == 1 && args[0].equals("reload")) {
-            configManager.load();
-            sender.sendMessage("コンフィグをリロードしました");
-            return true;
-        }
-        if (args.length == 3 && args[0].equals("set")) {
-            String path = args[1];
-            String value = args[2];
-            boolean result = configManager.setConfig(path, value);
-            if (result) {
-                sender.sendMessage(path + "を" + value + "にセットしました");
-            } else {
-                sender.sendMessage(ChatColor.RED + "コンフィグの設定に失敗しました");
-            }
-            return true;
-        }
-        return false;
+        Collection<EntityPlayer> targets = ArgumentEntity.f(context, "targets");
+        List<UUID> entities = targets.stream()
+                .map(EntityPlayer::getUniqueID)
+                .collect(Collectors.toList());
+        int result = configManager.addActivatedPlayers(entities);
+        context.getSource().sendMessage(new ChatComponentText(result + "人のプレイヤーをonに設定しました"), false);
+        return 0;
     }
 
-    @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
-        if (args.length == 1) {
-            return suggest(args[0], "reload", "set", "on", "off");
-        } else if (args.length == 2 && args[0].equals("set")) {
-            return suggest(args[1], ConfigManager.getConfigPaths());
+    private static int off(CommandContext<CommandListenerWrapper> context) throws CommandSyntaxException {
+        ConfigManager configManager = IncreaseEntityPlugin.getInstance().getConfigManager();
+        Collection<EntityPlayer> targets = ArgumentEntity.f(context, "targets");
+        List<UUID> entities = targets.stream()
+                .map(EntityPlayer::getUniqueID)
+                .collect(Collectors.toList());
+        int result = configManager.removeActivatedPlayers(entities);
+        context.getSource().sendMessage(new ChatComponentText(result + "人のプレイヤーをoffに設定しました"), false);
+        return 0;
+    }
+
+    private static int set(CommandContext<CommandListenerWrapper> context, String path) {
+        ConfigManager configManager = IncreaseEntityPlugin.getInstance().getConfigManager();
+        String value = StringArgumentType.getString(context, "value");
+        boolean result = configManager.setConfig(path, value);
+        if (result) {
+            context.getSource().sendMessage(new ChatComponentText(path + "を" + value + "にセットしました"), false);
         } else {
-            return null;
+            context.getSource().sendMessage(new ChatComponentText(ChatColor.RED + "コンフィグの設定に失敗しました"), false);
         }
+        return 0;
     }
 
-    private List<String> suggest(String arg, String... candidates) {
-        List<String> result = new ArrayList<>();
-        for (String candidate : candidates) {
-            if (candidate.startsWith(arg)) {
-                result.add(candidate);
-            }
-        }
-        return result;
+    private static int reload(CommandContext<CommandListenerWrapper> context) {
+        ConfigManager configManager = IncreaseEntityPlugin.getInstance().getConfigManager();
+        configManager.load();
+        context.getSource().sendMessage(new ChatComponentText("コンフィグをリロードしました"), false);
+        return 0;
     }
 }

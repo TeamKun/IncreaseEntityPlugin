@@ -57,18 +57,24 @@ public class ConfigManager {
         return activatedPlayers;
     }
 
-    public void addActivatedPlayers(List<UUID> add) {
+    public int addActivatedPlayers(List<UUID> add) {
         List<UUID> list = getActivatedPlayers();
+        int added = -list.size();
         list.addAll(add);
-        List<String> stringList = list.stream().map(UUID::toString).collect(Collectors.toList());
+        List<String> stringList = list.stream().distinct().map(UUID::toString).collect(Collectors.toList());
+        added += stringList.size();
         setConfig("activatedPlayers", stringList);
+        return added;
     }
 
-    public void removeActivatedPlayers(List<UUID> remove) {
+    public int removeActivatedPlayers(List<UUID> remove) {
         List<UUID> list = getActivatedPlayers();
-        list.removeAll(remove);
+        int removed = list.size();
+        list.removeAll(new HashSet<>(remove));
         List<String> stringList = list.stream().map(UUID::toString).collect(Collectors.toList());
+        removed -= stringList.size();
         setConfig("activatedPlayers", stringList);
+        return removed;
     }
 
     public int getDistance() {
